@@ -1,14 +1,11 @@
-#ifndef __GEO__
-#define __GEO__
+#ifndef __GEO_H__
+#define __GEO_H__
 
-typedef struct {
-  int x, y;
-} Point;
-
-typedef struct {
-  Point orig;
-  Point dest;
-} Segmento;
+#include "types.h"
+#define TOPOLOGY_INVALID_DUPLICATE 1
+#define TOPOLOGY_INVALID_OPEN      2
+#define TOPOLOGY_INVALID_OVERRIDE  3
+#define TOPOLOGY_VALID             0
 
 void print_segment(Segmento seg);
 
@@ -18,6 +15,8 @@ typedef struct {
 } Face;
 
 void print_face(Face f);
+
+int validate_well_defined_topology(Face *faces, int n_faces, EdgeMap map);
 
 // ##################
 // # DCEL STRUCTURE #
@@ -47,4 +46,4 @@ typedef struct Dcel_Face {
   int n_inner_faces;
 } Dcel_Face;
 
-#endif // __GEO__
+#endif // __GEO_H__

@@ -1,4 +1,5 @@
 #include "libs/geo.h"
+#include "libs/utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -63,5 +64,25 @@ int main() {
     // printf("Face %d \n", i);
     // print_face(faces[i]);
     // printf("\n ");
+  }
+
+  // Initializes the hash table that will help us check segments
+  EdgeMap map;
+  edge_map_init(&map);
+
+  // Validation
+  int topology_case = validate_well_defined_topology(faces, f_faces, map);
+  switch (topology_case) {
+  case TOPOLOGY_INVALID_DUPLICATE:
+    printf("não subdivisão planar\n");
+    break;
+
+  case TOPOLOGY_INVALID_OPEN:
+    printf("aberto");
+    break;
+
+  case TOPOLOGY_INVALID_OVERRIDE:
+    printf("superposta");
+    break;
   }
 }
