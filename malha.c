@@ -1,4 +1,5 @@
 #include "libs/geo.h"
+#include "libs/types.h"
 #include "libs/utils.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,7 +13,6 @@ int main() {
   Point *verts = malloc(n_ver * sizeof(Point));
   for (int i = 0; i < n_ver; i++) {
     scanf("%d %d", &verts[i].x, &verts[i].y);
-    // printf("%d %d\n", verts[i].x, verts[i].y);
   }
 
   // Builds the faces
@@ -41,10 +41,11 @@ int main() {
     }
 
     if (point_count <= 2) {
-      printf("Aberta");
+      printf("aberto");
       exit(1); // TODO: Free
     }
 
+    // Creates faces segments and basic structure
     faces[i].segments = malloc(point_count * sizeof(Segmento));
     faces[i].seg_size = point_count;
 
@@ -61,9 +62,6 @@ int main() {
     seg.dest = point_buffer[0];
 
     faces[i].segments[point_count - 1] = seg;
-    // printf("Face %d \n", i);
-    // print_face(faces[i]);
-    // printf("\n ");
   }
 
   // Initializes the hash table that will help us check segments
@@ -71,7 +69,7 @@ int main() {
   edge_map_init(&map);
 
   // Validation
-  int topology_case = validate_well_defined_topology(faces, f_faces, map);
+  int topology_case = validate_well_defined_topology(faces, f_faces, &map);
   switch (topology_case) {
   case TOPOLOGY_INVALID_DUPLICATE:
     printf("não subdivisão planar\n");
@@ -83,6 +81,10 @@ int main() {
 
   case TOPOLOGY_INVALID_OVERRIDE:
     printf("superposta");
+    break;
+
+  case TOPOLOGY_VALID:
+    DCEL *dcel = generate_DCEL(&map, faces, f_faces);
     break;
   }
 }

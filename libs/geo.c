@@ -1,6 +1,8 @@
 #include "geo.h"
+#include "types.h"
 #include "utils.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 void print_segment(Segmento seg) {
   printf("Segment from (%d, %d) to (%d, %d)\n", seg.orig.x, seg.orig.y,
@@ -51,7 +53,7 @@ int intersect(Segmento a, Segmento b) {
   return 0;
 }
 
-int validate_well_defined_topology(Face *faces, int n_faces, EdgeMap map) {
+int validate_well_defined_topology(Face *faces, int n_faces, EdgeMap *map) {
 
   // #################################################
   // # "não subdivisão planar" case, duplicate edges #
@@ -66,11 +68,20 @@ int validate_well_defined_topology(Face *faces, int n_faces, EdgeMap map) {
       // If it does already --> não subdivisão planar
 
       int face;
-      if (edge_map_get(&map, this_seg, &face)) {
+      if (edge_map_get(map, this_seg, &face, NULL)) {
 
         return TOPOLOGY_INVALID_DUPLICATE;
       } else {
-        edge_map_insert(&map, this_seg, i);
+        // Bad code, but let's use this step to pré build de DCEL
+        Vertex *origin = malloc(sizeof(Vertex));
+        HalfEdge *edge = malloc(sizeof(HalfEdge));
+
+        origin->coords = this_seg.orig;
+        origin->incident_edge = edge;
+
+        edge->e_orig = origin;
+
+        edge_map_insert(map, this_seg, i, edge);
       }
     }
   }
@@ -92,7 +103,7 @@ int validate_well_defined_topology(Face *faces, int n_faces, EdgeMap map) {
       // respective inverted from another face
 
       int face;
-      if (edge_map_get(&map, inverted_seg, &face) && face != i) {
+      if (edge_map_get(map, inverted_seg, &face, NULL) && face != i) {
         // printf("Neighboors / Same on face %d and face %d: \n", i, face);
         // print_segment(this_seg);
         // print_segment(inverted_seg);
@@ -136,4 +147,25 @@ int validate_well_defined_topology(Face *faces, int n_faces, EdgeMap map) {
   }
 
   return TOPOLOGY_VALID;
+}
+
+DCEL *generate_DCEL(EdgeMap *map, Face *faces, int n_faces) {
+  DCEL *dcel = malloc(sizeof(DCEL));
+  dcel->faces = malloc(n_faces * (sizeof(Dcel_Face)));
+
+  for (int i = 0; i < 1; i++) {
+    Face thisFace = faces[i];
+    for (int x = 0; x < 1; x++) {
+      Segmento thisSeg = thisFace.segments[x];
+      HalfEdge *test;
+      edge_map_get(map, faces[i].segments[x], NULL, &test);
+
+      print_segment(thisSeg);
+      printf("%d %d\n", test->e_orig->coords.x, test->e_orig->coords.y);
+
+      // Find inverted, asign as twin, fix ids idk... 
+    }
+  }
+
+  return dcel;
 }

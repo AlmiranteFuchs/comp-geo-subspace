@@ -9,8 +9,8 @@
 
 // Functions
 void edge_map_init(EdgeMap *map);
-int edge_map_insert(EdgeMap *map, Segmento s, int face_id);
-int edge_map_get(EdgeMap *map, Segmento s, int *face_id);
+int edge_map_insert(EdgeMap *map, Segmento s, int face_id, HalfEdge *edge);
+int edge_map_get(EdgeMap *map, Segmento s, int *face_id, HalfEdge **edge);
 
 int same_segmento(Segmento a, Segmento b);
 
