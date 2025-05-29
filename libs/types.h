@@ -38,7 +38,6 @@ typedef struct Vertex {
 
 typedef struct HalfEdge {
   Vertex *e_orig;
-  Vertex *e_dest;
   struct HalfEdge *e_twin;
   struct HalfEdge *e_next;
   struct HalfEdge *e_prev;

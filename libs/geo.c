@@ -45,11 +45,11 @@ HalfEdge *all_half_edges[MAX_HALF_EDGES];
 int half_edge_count = 0;
 
 void add_half_edge(HalfEdge *e) {
-    if (half_edge_count >= MAX_HALF_EDGES) {
-        fprintf(stderr, "Too many half edges!\n");
-        exit(1);
-    }
-    all_half_edges[half_edge_count++] = e;
+  if (half_edge_count >= MAX_HALF_EDGES) {
+    fprintf(stderr, "Too many half edges!\n");
+    exit(1);
+  }
+  all_half_edges[half_edge_count++] = e;
 }
 
 void print_segment(Segmento seg) {
@@ -120,18 +120,8 @@ int validate_well_defined_topology(Face *faces, int n_faces, EdgeMap *map) {
 
         return TOPOLOGY_INVALID_DUPLICATE;
       } else {
-        // Bad code, but let's use this step to pré build de DCEL
-        HalfEdge *edge = malloc(sizeof(HalfEdge));
 
-        Vertex *origin = find_or_create_vertex(this_seg.orig);
-        if (origin->incident_edge == NULL) {
-          origin->incident_edge = edge;
-        }
-        edge->e_orig = origin;
-
-        add_half_edge(edge);
-
-        edge_map_insert(map, this_seg, i, edge);
+        edge_map_insert(map, this_seg, i, NULL);
       }
     }
   }
@@ -207,70 +197,100 @@ DCEL *generate_DCEL(EdgeMap *map, Face *faces, int n_faces) {
 
   for (int i = 0; i < n_faces; i++) {
     Face curr_face = faces[i];
-
-    // Create the dcel face that holds all half edges
     dcel->faces[i].face_id = i + 1;
 
-    // Previous edge ref
-    HalfEdge *prev_seg_edge = NULL;
-    HalfEdge *first = NULL;
-    HalfEdge *last = NULL;
+    HalfEdge *first_edge = NULL;
+    HalfEdge *prev_edge = NULL;
 
     for (int x = 0; x < curr_face.seg_size; x++) {
       Segmento curr_seg = curr_face.segments[x];
       Segmento curr_seg_inverted = {{curr_seg.dest.x, curr_seg.dest.y},
                                     {curr_seg.orig.x, curr_seg.orig.y}};
 
-      // All segments already have their original half edge linked to them via
-      // map.
-      // Now we need to find the twin of that segment and assign each other
-      HalfEdge *curr_seg_edge;
-      edge_map_get(map, curr_seg, NULL, &curr_seg_edge);
+      HalfEdge *existing_edge = NULL;
+      int existing_edge_face_index = -1; // +1 gives id of face
 
-      if (curr_seg_edge == NULL) {
-        printf("Could not find edge of this segment, major error :C");
-        exit(0);
+      HalfEdge *existing_twin_edge = NULL;
+      int existing_twin_edge_face_index = -1;
+
+      // Check for existing
+      edge_map_get(map, curr_seg, &existing_edge_face_index, &existing_edge);
+      edge_map_get(map, curr_seg_inverted, &existing_twin_edge_face_index,
+                   &existing_twin_edge);
+
+      // Handles creation
+      if (existing_twin_edge == NULL) {
+
+        // #############################
+        // #### Create Primary Edge ####
+        // #############################
+
+        HalfEdge *edge = malloc(sizeof(HalfEdge));
+        edge->e_id = edge_count;
+        edge_count++;
+        edge->e_incident_face = &dcel->faces[i];
+
+        Vertex *origin_seg = find_or_create_vertex(curr_seg.orig);
+        if (origin_seg->incident_edge == NULL) {
+          origin_seg->incident_edge = edge;
+        }
+
+        edge->e_orig = origin_seg;
+        add_half_edge(edge);
+        edge_map_insert(map, curr_seg, i, edge);
+
+        // ################################
+        // #### Create Twin Edge ##########
+        // ################################
+
+        HalfEdge *twin_edge = malloc(sizeof(HalfEdge));
+        twin_edge->e_id = edge_count;
+        edge_count++;
+        twin_edge->e_incident_face =
+            &dcel->faces[existing_twin_edge_face_index];
+
+        // Assign a vertex for that edge
+        Vertex *origin = find_or_create_vertex(curr_seg_inverted.orig);
+        if (origin->incident_edge == NULL) {
+          origin->incident_edge = twin_edge;
+        }
+
+        twin_edge->e_orig = origin;
+        add_half_edge(twin_edge);
+        edge_map_insert(map, curr_seg_inverted, existing_twin_edge_face_index,
+                        twin_edge);
+
+        // Assign pointer for linking
+        existing_twin_edge = twin_edge;
+
+        // Assign pointers ;)
+        edge->e_twin = twin_edge;
+        twin_edge->e_twin = edge;
+
+        // Assign pointer for linking
+        existing_edge = edge;
       }
 
-      HalfEdge *curr_seg_edge_twin;
-      edge_map_get(map, curr_seg_inverted, NULL, &curr_seg_edge_twin);
-
-      if (curr_seg_edge_twin == NULL) {
-        printf("Could not find twin edge of this segment, major error :C");
-        exit(0);
+      // Handles Prev --> Next linking
+      if (prev_edge != NULL) {
+        prev_edge->e_next = existing_edge;
+        existing_edge->e_prev = prev_edge;
+      } else {
+        first_edge = existing_edge;
       }
 
-      // Assign twin pointers
-      curr_seg_edge->e_twin = curr_seg_edge_twin;
-      curr_seg_edge_twin->e_twin = curr_seg_edge;
+      prev_edge = existing_edge;
 
-      // Assign face pointer to this edge
-      curr_seg_edge->e_incident_face = &dcel->faces[i];
-      curr_seg_edge->e_id = edge_count;
-      edge_count++;
-
-      // Fix vertex info
-
-      // Assign previous half edge as previous and next half edge on this edge
-      if (x > 0 && x < curr_face.seg_size) {
-        curr_seg_edge->e_prev = prev_seg_edge;
-        prev_seg_edge->e_next = curr_seg_edge;
-      }
-
-      if (x == 0) {
-        first = curr_seg_edge; // Save pointer to first
-        dcel->faces[i].outer_component = curr_seg_edge;
-      }
-
-      if (x == curr_face.seg_size - 1) {
-        last = curr_seg_edge; // Save pointer to last
-      }
-
-      prev_seg_edge = curr_seg_edge;
+      dcel->faces[i].outer_component = existing_edge;
     }
 
-    last->e_next = first;
-    first->e_prev = last;
+    if (prev_edge != NULL && first_edge != NULL) {
+      prev_edge->e_next = first_edge;
+      first_edge->e_prev = prev_edge;
+    }
+
+    // Fixes start segment
+    dcel->faces[i].outer_component = dcel->faces[i].outer_component->e_next;
   }
 
   return dcel;
@@ -278,13 +298,11 @@ DCEL *generate_DCEL(EdgeMap *map, Face *faces, int n_faces) {
 
 void print_all_half_edges() {
   for (int i = 0; i < half_edge_count; i++) {
-      HalfEdge *e = all_half_edges[i];
-      printf("%d %d %d %d %d\n",
-             e->e_orig ? e->e_orig->v_id : -1,
-             e->e_twin ? e->e_twin->e_id : -1,
-             e->e_incident_face ? e->e_incident_face->face_id : -1,
-             e->e_next ? e->e_next->e_id : -1,
-             e->e_prev ? e->e_prev->e_id : -1);
+    HalfEdge *e = all_half_edges[i];
+    printf("%d %d %d %d %d\n", e->e_orig ? e->e_orig->v_id : -1,
+           e->e_twin ? e->e_twin->e_id : -1,
+           e->e_incident_face ? e->e_incident_face->face_id : -1,
+           e->e_next ? e->e_next->e_id : -1, e->e_prev ? e->e_prev->e_id : -1);
   }
 }
 

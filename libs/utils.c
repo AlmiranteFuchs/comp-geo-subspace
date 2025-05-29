@@ -1,5 +1,7 @@
 #include "utils.h"
+#include "geo.h"
 #include "types.h"
+#include <stdlib.h>
 
 void edge_map_init(EdgeMap *map) {
   for (int i = 0; i < TABLE_SIZE; i++) {
@@ -33,7 +35,8 @@ int edge_map_insert(EdgeMap *map, Segmento s, int face_id, HalfEdge *edge) {
       map->table[pos].half_edge = edge;
       return 1; // Inserido com sucesso
     } else if (same_segmento(map->table[pos].key, s)) {
-      return 0; // Já existe
+      map->table[pos].half_edge = edge; // <<< sobrescreve
+      return 1; // atualizado com sucesso
     }
   }
   return -1; // Mapa cheio
@@ -53,4 +56,21 @@ int edge_map_get(EdgeMap *map, Segmento s, int *face_id, HalfEdge **edge) {
     }
   }
   return 0; // Não encontrado
+}
+
+void free_faces(Face *faces, int f_faces) {
+  if (!faces) return;
+  for (int i = 0; i < f_faces; i++) {
+    if (faces[i].segments)
+      free(faces[i].segments);
+  }
+  free(faces);
+}
+
+void free_dcel(DCEL *dcel) {
+  if (!dcel) return;
+
+  // Free DCEL face array
+  free(dcel->faces);
+  free(dcel);
 }

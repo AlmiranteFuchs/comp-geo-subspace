@@ -13,6 +13,7 @@ int main() {
   Point *verts = malloc(n_ver * sizeof(Point));
   for (int i = 0; i < n_ver; i++) {
     scanf("%d %d", &verts[i].x, &verts[i].y);
+    find_or_create_vertex(verts[i]);
   }
 
   // Builds the faces
@@ -106,8 +107,10 @@ int main() {
       printf("%d\n", start->e_id);
     }
 
-    // Print all half edges
     print_all_half_edges();
+
+    free_faces(faces, f_faces);
+    free_dcel(dcel);
 
     break;
   }
