@@ -33,10 +33,12 @@ typedef struct {
 typedef struct Vertex {
   Point coords;
   struct HalfEdge *incident_edge; // half-edges that starts from this vertex
+  int v_id;
 } Vertex;
 
 typedef struct HalfEdge {
   Vertex *e_orig;
+  Vertex *e_dest;
   struct HalfEdge *e_twin;
   struct HalfEdge *e_next;
   struct HalfEdge *e_prev;
@@ -55,5 +57,7 @@ typedef struct Dcel_Face {
 typedef struct DCEL {
   Dcel_Face *faces;
 } DCEL;
+
+Vertex *find_vertex_by_point(DCEL *dcel, int n_faces, Point pt);
 
 #endif

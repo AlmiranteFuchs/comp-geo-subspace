@@ -85,6 +85,30 @@ int main() {
 
   case TOPOLOGY_VALID:
     DCEL *dcel = generate_DCEL(&map, faces, f_faces);
+    //  vertices, arestas, e faces
+    int n_arr = 0;
+    for (int i = 0; i < f_faces; i++) {
+      n_arr += faces[i].seg_size;
+    }
+
+    // Printf n m f
+    printf("%d %d %d\n", n_ver, n_arr / 2, f_faces);
+
+    // Print xi e yi de cada v´ertice e o ´ındice de uma semi-aresta
+    for (int i = 0; i < n_ver; i++) {
+      Vertex *ver = find_vertex_by_point(dcel, f_faces, verts[i]);
+      printf("%d %d %d\n", verts[i].x, verts[i].y, ver->incident_edge->e_id);
+    }
+
+    // Print face and first half edge of face
+    for (int i = 0; i < f_faces; i++) {
+      HalfEdge *start = dcel->faces[i].outer_component;
+      printf("%d\n", start->e_id);
+    }
+
+    // Print all half edges
+    print_all_half_edges();
+
     break;
   }
 }
